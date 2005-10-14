@@ -6,7 +6,6 @@ WriteMakefile(
   AUTHOR       => 'Dan Brook',
 
   PREREQ_PM    => {
-    'PadWalker'   => 0,
-    'List::Util'  => 0,
+    'PadWalker'     => '0.99_91',
   },
 );

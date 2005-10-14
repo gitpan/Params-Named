@@ -1,12 +1,11 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Params-Named
-version:      1.0.0
+version:      1.0.1
 version_from: lib/Params/Named.pm
 installdirs:  site
 requires:
-    List::Util:                    0
-    PadWalker:                     0
+    PadWalker:                     0.99_91
 
 distribution_type: module
 generated_by: ExtUtils::MakeMaker version 6.17

@@ -1,60 +1,47 @@
 package Params::Named;
 
-$VERSION = '1.0.0';
+$VERSION = '1.0.1';
 
-## Might as well be standardized.
 require Exporter;
 @ISA     = 'Exporter';
 @EXPORT  = 'MAPARGS';
 
 use strict;
 
-use Carp       qw/croak carp/;
-use PadWalker  'peek_sub';
-use List::Util 'first';
+use Carp      qw/croak carp/;
+use PadWalker 'var_name';
+
+sub VAR { return {qw/SCALAR $ ARRAY @ HASH % REF $/}->{ref $_[0]}.$_[1]; }
+
+sub _set_param {
+  my($p, $v, $n) = @_; # param, value, name
+  return $$p = $v
+    if ref $p eq 'SCALAR'
+    && (ref $v || ref \$v) eq 'SCALAR' || (ref $v eq 'REF');
+  return @$p = @$v
+    if ref $p eq 'ARRAY' && ref $v eq 'ARRAY';
+  return %$p = %$v
+    if ref $p eq 'HASH' && ref $v eq 'HASH';
+
+  croak sprintf "The parameter '%s' doesn't match argument type '%s'",
+                VAR($p,$n), ( ref $v || ref \$v );
+}
 
 ## Map named arguments to variables of those names.
 sub MAPARGS {
-  ## The arguments of the caller.
   my %args = do { package DB; () = caller 1; @DB::args };
-  ## The lexical values of the caller.
-  my $vals = peek_sub \&{(caller 1)[3]};
   ## Map the lexicals of the caller to the caller's arguments.
-  my %vmap = map { $_ => $args{substr($_, 1)} }
-             grep exists $args{substr($_, 1)}, keys %$vals;
-  ## Map arguments to MAPARGS to the appropriate lexicals.
-  my %pmap = map {
-    my $orig_arg = !ref($_)?\$_:$_;
-    my $ref_name = first { $orig_arg == $vals->{$_} } keys %$vals;
-    $ref_name => $orig_arg;
+  my %vmap = map {
+    my $arg = ref $_ ? $_ : \$_;
+    my $prm = substr(var_name(1, $arg), 1);
+    exists $args{$prm}
+      ? ($prm => $arg)
+      : (() = carp "Parameter '${\VAR($arg,$prm)}' not mapped to an argument")
   } @_;
 
-  carp sprintf "No parameters mapped for '%s' at line no. '%s'",
-               (caller 1)[3,2]
-    if !keys %vmap;
-
   ## Now assign the caller's arguments to the caller's lexicals.
-  for(keys %vmap) {
-    ## Param is a SCALAR and the value is SCALAR or REF.
-    if( ref $pmap{$_} eq 'SCALAR'
-    && ((ref $vmap{$_} || ref \$vmap{$_}) eq 'SCALAR') || (ref $vmap{$_} eq 'REF')) {
-      ${ $pmap{$_} } = $vmap{$_};
-      next;
-    }
-    ## Param is ARRAY and value is ARRAY
-    if(ref $pmap{$_} eq 'ARRAY' && ref $vmap{$_} eq 'ARRAY')  {
-      @{ $pmap{$_} } = @{ $vmap{$_} };
-      next;
-    }
-    ## Param is HASH and value is HASH
-    if(ref $pmap{$_} eq 'HASH' && ref $vmap{$_} eq 'HASH')   {
-      %{ $pmap{$_} } = %{ $vmap{$_} };
-      next;
-    }
-    croak
-      sprintf "The parameter '%s' doesn't match argument type '%s'",
-              $_, ( ref $vmap{$_} || ref \$vmap{$_} );
-  }
+  _set_param $vmap{$_} => $args{$_}, $_
+    for keys %vmap;
 
   return \%vmap;
 }
@@ -119,14 +106,18 @@ of lexical values.
 
 =item MAPARGS
 
-Given a list of variables map those variables to named arguments from
-the caller's argument stack (e.g C<@_>). Taking advantage of one of
-Perl's more under-utilized features, passing in a list of references
-as created by applying the reference operator to a list will allow the
-mapping of compound variables (without the reference lexically declared
-arrays and hashes flatten to an empty list). Argument types must match
-their corresponding parameter types e.g C<< foo => \@things >> should map
-to a parameter declared as an array e.g C<MAPARGS \my(@foo)>.
+Given a list of variables map those variables to named arguments from the
+caller's argument. Taking advantage of one of Perl's more under-utilized
+features, passing in a list of references as created by applying the
+reference operator to a list will allow the mapping of compound variables
+(without the reference lexically declared arrays and hashes flatten to an
+empty list). Argument types must match their corresponding parameter types
+e.g C<< foo => \@things >> should map to a parameter declared as an array
+e.g C<MAPARGS \my(@foo)>.
+
+The arguments passed to C<MAPARGS> don't need to be referenced if they are
+simple scalars, but do need to be referenced if either an array or hash is
+used.
 
 =back
 
@@ -138,10 +129,11 @@ C<MAPARGS>
 
 =over 4
 
-=item C<No parameters mapped for '%s' at line no. '%s'>
+=item C<Parameter '%s' not mapped to an argument>
 
-This warning is issued because none of the arguments matched any of the
-parameters, so no mapping is performed.
+This warning is issued because a parameter couldn't be mapped to an argument
+i.e if C<< foo1 => 'bar' >> is accidentally passed to subroutine who's
+parameter is C<$fool>.
 
 =item C<The parameter '%s' doesn't match argument type '%s'>
 
@@ -155,6 +147,15 @@ So either the parameter or the argument needs to be updated to reflect
 the desired behaviour.
 
 =back
+
+=head1 SEE. ALSO
+
+L<Sub::Parameters>, L<Sub::Signatures>, L<Params::Smart>
+
+=head1 THANKS
+
+Robin Houston for bug spotting, code refactoring, idea bouncing and releasing
+a new version of L<PadWalker> (is there anything he can't do?).
   
 =head1 AUTHOR
 

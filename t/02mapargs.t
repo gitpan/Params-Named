@@ -32,29 +32,33 @@ use Params::Named;
   is       $a, $x, 'The string matched normally.';
   ok eq_array($b, $y), 'The array mapped and matches correctly.';
   ok eq_hash( $c, $z), 'The hash mapped and matches correctly.';
+}
 
-  ($a) = eval { testhis x => \\'thingie' };
+{
+  sub testtypes { MAPARGS \my($x); return $x }
+
+  ($a) = eval { testtypes x => \\'thingie' };
   ok !$@, 'Mapped what is a REF in 5.8 without a problem.';
   is $$$a, 'thingie', 'The string in REF is as expected.';
 
   local $@;
-  eval { testhis y => {} };
+  eval { testtypes x => {} };
   ok $@, 'Giving an incorrect type dies expectedly.';
-  like $@, qr/\@y.*?HASH/, 'The error message looks about right.';
+  like $@, qr/\$x.*?HASH/, 'The error message looks about right.';
 }
 
 {
-  ## I could use Test::Warn, but for ONE test? Don't think so.
   local $SIG{__WARN__} = sub {
     like $_[0],
-         qr/No parameters mapped for 'main::nomatch' at line no\. '\d+'/,
-         'Got the expected warning when no parameters matched.';
+         qr/Parameter '\$wuzzle' not mapped to an argument/,
+         'Complained appropriately for unmapped parameter.';
   };
-  sub nomatch {
-    MAPARGS \my($these, $are, @args);
-    return $these, $are, \@args;
+  sub noparam {
+    MAPARGS \my($woozle, $wuzzle);
+    return $woozle, $wuzzle;
   }
 
-  eval { nomatch qw/ none of this list will match / };
-  ok !$@, "Not passing in any expected params doesn't die.";
+  local $@;
+  eval { noparam woozle => 'Map this!', wuzz1e => 'Not this!' };
+  ok !$@, "Not mapping to every param doesn't die.";
 }

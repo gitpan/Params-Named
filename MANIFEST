@@ -6,5 +6,6 @@ MANIFEST.SKIP
 README
 t/01base.t
 t/02mapargs.t
+t/03multi_vars.t
 t/99pod.t
 META.yml                                 Module meta-data (added by MakeMaker)

@@ -1,6 +1,6 @@
-Params/Util version 1.0.0
-=========================
+Params/Util version 1.0.1
 
+=========================
 
 INSTALLATION
 
@@ -16,7 +16,6 @@ DEPENDENCIES
 This module requires these other modules and libraries:
 
   PadWalker
-  List::Util
 
 COPYRIGHT AND LICENCE
 
