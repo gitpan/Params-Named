@@ -1,6 +1,6 @@
 package Params::Named;
 
-$VERSION = '1.0.1';
+$VERSION = '1.0.2';
 
 require Exporter;
 @ISA     = 'Exporter';
